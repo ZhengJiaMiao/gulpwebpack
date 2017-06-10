@@ -13,19 +13,28 @@ var gulp = require('gulp'),
     notify = require('gulp-notify'),
     cache = require('gulp-cache'),
     livereload = require('gulp-livereload'),
-    fileinclude = require('gulp-file-include') ;
+    fileinclude = require('gulp-file-include'),
+	sourcemap = require( 'gulp-sourcemaps')
+	rev = require('gulp-rev'); //- 对文件名加MD5后缀
 
 
 // 样式
 gulp.task('styles', function() {
-  return sass('src/css/*.scss')
+  return gulp.src('src/css/*.css')
       .pipe(autoprefixer('last 2 version', 'safari 5', 'ie 8', 'ie 9', 'opera 12.1', 'ios 6', 'android 4'))
       .pipe(gulp.dest('dist/css'))
       .pipe(rename({ suffix: '.min' }))
       .pipe(minifycss())
+	  //.pipe(rev())
       .pipe(gulp.dest('dist/css'))
-      .pipe(notify({ message: 'Styles task complete' }));
+      .pipe(notify({ message: 'Styles task complete' }))
+		.pipe(browserSync.reload({
+			stream: true
+		}));
 });
+
+
+
 
 // 脚本
 gulp.task('scripts', function() {
@@ -42,7 +51,10 @@ gulp.task('scripts', function() {
       .pipe(rename({ suffix: '.min' }))
       .pipe(uglify())
       .pipe(gulp.dest('dist/js'))
-      .pipe(notify({ message: 'Scripts task complete' }));
+      .pipe(notify({ message: 'Scripts task complete' }))
+		.pipe(browserSync.reload({
+			stream: true
+		}));
 });
 
 // 图片
@@ -50,7 +62,10 @@ gulp.task('images', function() {
   return gulp.src('src/images/**/*')
       .pipe(cache(imagemin({ optimizationLevel: 3, progressive: true, interlaced: true })))
       .pipe(gulp.dest('dist/images'))
-      .pipe(notify({ message: 'Images task complete' }));
+      .pipe(notify({ message: 'Images task complete' }))
+		.pipe(browserSync.reload({
+			stream: true
+		}));
 });
 //html
 gulp.task('html', function() {
@@ -60,35 +75,48 @@ gulp.task('html', function() {
         basepath: '@file'
       }))
       .pipe(gulp.dest('dist/'))
-      .pipe(notify({ message: 'html task complete' }));
+      .pipe(notify({ message: 'html task complete' }))
+		.pipe(browserSync.reload({
+			stream: true
+		}));
 });
 // 清理
 gulp.task('clean', function() {
   return gulp.src(['dist/css', 'dist/js', 'dist/images'], {read: false})
-      .pipe(clean());
+      .pipe(clean())
+		.pipe(browserSync.reload({
+			stream: true
+		}));
 });
 
 // 预设任务
 gulp.task('default', ['clean'], function() {
-  gulp.start('styles', 'scripts', 'images', 'html');
+  gulp.start('styles', 'scripts', 'images', 'html')
+		.pipe(browserSync.reload({
+			stream: true
+		}));
 });
 
+//创建本地服务器,并监听文件变化
+var browserSync = require('browser-sync');
+gulp.task('serve', function() {
+	browserSync({
+		server: {
+			baseDir: ['dist']
+		}
+	}, function(err, bs) {
+	    console.log(bs.options.getIn(["urls", "local"]));
+	});
 
-gulp.task('watch', function() {
+	// 看守所有.scss档
+	  gulp.watch('src/css/**/*.css', ['styles']);
 
-  // 看守所有.scss档
-  gulp.watch('src/css/**/*.scss', ['styles']);
+	  // 看守所有.js档
+	  gulp.watch('src/js/**/*.js', ['scripts']);
 
-  // 看守所有.js档
-  gulp.watch('src/js/**/*.js', ['scripts']);
+	  // 看守所有图片档
+	  gulp.watch('src/images/**/*', ['images']);
 
-  // 看守所有图片档
-  gulp.watch('src/images/**/*', ['images']);
-
-  //看守html
-  gulp.watch('src/**/*.html', ['html']) ;
-
-  livereload.listen();
-  gulp.watch(['dist/**']).on('change', livereload.changed);
-
+	  //看守html
+	  gulp.watch('src/**/*.html', ['html']) ;
 });
